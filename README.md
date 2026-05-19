@@ -8,7 +8,6 @@
 [![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-purple?logo=github&logoColor=white)](https://github.com/ultralytics/ultralytics)
 [![USD](https://img.shields.io/badge/USD-OpenUSD-76b900?logo=nvidia&logoColor=white)](https://openusd.org/)
 [![Isaac Sim](https://img.shields.io/badge/NVIDIA-Isaac%20Sim-76b900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/isaac-sim)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 *Vehicle detection · Multi-object tracking · 2D-to-3D mapping · Animated USD export*
 
@@ -16,17 +15,6 @@
 
 </div>
 
----
-
-> **Demo**
->
-> <p align="center">
->   <video src="docs/demo.mp4" controls width="900"></video>
-> </p>
->
-> [Watch demo video](docs/demo.mp4)
-
----
 
 ## Overview
 
@@ -220,11 +208,6 @@ A successful run produces two files in the `output/` directory:
 - [ ] Optional loading of real vehicle USD asset libraries
 - [ ] Multi-camera support
 
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
 
 ---
 

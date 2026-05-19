@@ -1,167 +1,235 @@
+<div align="center">
+
 # TrafficVision3D
 
-Turn a traffic video into an animated 3D USD scene using YOLOv8 detection, multi-object tracking, and automatic 2D-to-3D mapping.
+**Turn a monocular traffic video into an animated 3D USD scene — ready for NVIDIA Isaac Sim or USD Composer**
 
-The output is ready to inspect in **NVIDIA Isaac Sim** or **NVIDIA USD Composer**.
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://www.python.org/)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8-Ultralytics-purple?logo=github&logoColor=white)](https://github.com/ultralytics/ultralytics)
+[![USD](https://img.shields.io/badge/USD-OpenUSD-76b900?logo=nvidia&logoColor=white)](https://openusd.org/)
+[![Isaac Sim](https://img.shields.io/badge/NVIDIA-Isaac%20Sim-76b900?logo=nvidia&logoColor=white)](https://developer.nvidia.com/isaac-sim)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+
+*Vehicle detection · Multi-object tracking · 2D-to-3D mapping · Animated USD export*
+
+[Overview](#overview) · [How It Works](#how-it-works) · [Installation](#installation) · [Quick Start](#quick-start) · [Output](#output) · [Viewers](#opening-in-nvidia-tools) · [Roadmap](#roadmap)
+
+</div>
 
 ---
 
-## What this project does
-
-- Reads a monocular traffic video (`.mp4`, `.avi`, `.mov`)
-- Detects vehicles with YOLOv8
-- Tracks vehicles across frames with persistent IDs
-- Estimates 3D world positions and heading from motion
-- Generates an animated USD highway scene
-- Exports track metadata for analysis
+> **Demo**
+>
+> <p align="center">
+>   <video src="docs/demo.mp4" controls width="900"></video>
+> </p>
+>
+> [Watch demo video](docs/demo.mp4)
 
 ---
 
-## Demo on GitHub (Video in README)
+## Overview
 
-To show video on the GitHub main page, place a demo file in your repo, for example:
+TrafficVision3D is a fully automated pipeline that processes an ordinary monocular traffic video and produces a physics-ready, animated 3D scene in Universal Scene Description (USD) format. No depth camera or LiDAR required.
 
-- `docs/demo.mp4`
+**What the pipeline delivers:**
 
-Then use this in `README.md`:
+- Detects vehicles (cars, buses, trucks) using YOLOv8
+- Assigns and maintains persistent track IDs across frames
+- Estimates each vehicle's 3D world position and heading from 2D image motion
+- Exports a complete animated highway scene — road surface, lighting, and vehicles — as a single `.usd` file
+- Writes per-track metadata to JSON for downstream analysis
 
-```html
-<p align="center">
-  <video src="docs/demo.mp4" controls width="900"></video>
-</p>
+The output opens directly in **NVIDIA Isaac Sim** or **NVIDIA USD Composer** with no post-processing required.
+
+---
+
+## How It Works
+
+```
+Traffic Video (.mp4 / .avi / .mov)
+         │
+         ▼
+  ┌─────────────┐
+  │  Detection  │  YOLOv8 — detects car, bus, truck per frame
+  └──────┬──────┘
+         │ bounding boxes
+         ▼
+  ┌─────────────┐
+  │  Tracking   │  Distance-based assignment → stable per-vehicle IDs
+  └──────┬──────┘
+         │ trajectories
+         ▼
+  ┌──────────────┐
+  │  3D Mapping  │  2D image coords → road-space (X, Y, Z) coordinates
+  └──────┬───────┘
+         │ world positions
+         ▼
+  ┌─────────────────┐
+  │  Orientation    │  Heading angle computed from trajectory direction
+  └──────┬──────────┘
+         │ pose + heading
+         ▼
+  ┌──────────────┐
+  │  USD Export  │  Scene, road, lighting, and vehicle animations
+  └──────┬───────┘
+         │
+         ▼
+  output/traffic_animation.usd
+  output/realistic_animation_summary.json
 ```
 
-If a browser does not render inline video, add a fallback link:
+### Pipeline stages
 
-```md
-[Watch demo video](docs/demo.mp4)
-```
-
----
-
-## Output viewers
-
-You can open the generated `.usd` scene in either:
-
-- **Isaac Sim** (recommended when you want robotics/simulation workflow)
-- **USD Composer** (recommended when you want scene inspection and USD editing)
-
-Both can load `output/traffic_animation.usd`.
+| Stage | Method |
+|---|---|
+| **Detection** | YOLOv8 — COCO traffic classes (`car`, `bus`, `truck`) |
+| **Tracking** | Distance-based multi-object assignment with persistent IDs |
+| **3D mapping** | Projective 2D → road-plane homography |
+| **Orientation** | Heading estimated from frame-to-frame trajectory vector |
+| **USD export** | OpenUSD API — scene graph, road mesh, point lights, animated Xform prims |
 
 ---
 
-## Project structure
+## Project Structure
 
 ```text
-.
-├── main.py
+trafficvision3d/
+│
+├── main.py                   # Pipeline entry point
 ├── requirements.txt
-├── output/
-│   └── (generated .usd + summary .json)
+│
+├── output/                   # Generated files (created at runtime)
+│   ├── traffic_animation.usd
+│   └── realistic_animation_summary.json
+│
+├── docs/
+│   └── demo.mp4              # Demo video (place here for GitHub preview)
+│
 └── README.md
 ```
 
 ---
 
-## Quick start
+## Installation
 
-### 1) Create environment
+**Prerequisites:** Python 3.10+
+
+> **Note on `pxr` (USD Python bindings):** The `pxr` package is bundled with NVIDIA Omniverse and Isaac Sim environments. If you are running outside those environments, install [OpenUSD Python bindings](https://openusd.org/release/python_support.html) compatible with your platform separately.
 
 ```bash
+# 1. Clone the repository
+git clone https://github.com/kamranghz/trafficvision3d.git
+cd trafficvision3d
+
+# 2. Create and activate a virtual environment
 python -m venv .venv
-```
 
-Windows (PowerShell):
-
-```bash
-.venv\Scripts\Activate.ps1
-```
-
-Linux/macOS:
-
-```bash
+# Linux / macOS
 source .venv/bin/activate
-```
 
-### 2) Install dependencies
+# Windows (PowerShell)
+.venv\Scripts\Activate.ps1
 
-```bash
+# 3. Install dependencies
 pip install -r requirements.txt
 ```
 
-> Note: `pxr` (USD Python API) is typically provided by Omniverse/Isaac Sim environments.  
-> If your system does not provide it, install USD Python bindings compatible with your platform.
+---
 
-### 3) Run pipeline
+## Quick Start
+
+### Basic run
 
 ```bash
 python main.py --video path/to/traffic_video.mp4
 ```
 
-Optional:
+### With explicit output options
 
 ```bash
-python main.py --video path/to/traffic_video.mp4 --output traffic_animation.usd --output-dir output
+python main.py \
+  --video path/to/traffic_video.mp4 \
+  --output traffic_animation.usd \
+  --output-dir output
+```
+
+Supported input formats: `.mp4`, `.avi`, `.mov`
+
+---
+
+## Output
+
+A successful run produces two files in the `output/` directory:
+
+| File | Description |
+|---|---|
+| `traffic_animation.usd` | Animated 3D scene — road, lighting, and all tracked vehicles |
+| `realistic_animation_summary.json` | Per-track metadata and processing summary |
+
+### JSON summary format
+
+```json
+{
+  "total_frames": 450,
+  "tracks": [
+    {
+      "id": 3,
+      "class": "car",
+      "first_frame": 12,
+      "last_frame": 401,
+      "avg_speed_ms": 14.2
+    }
+  ]
+}
 ```
 
 ---
 
-## Generated files
+## Opening in NVIDIA Tools
 
-After a successful run:
+### Isaac Sim *(recommended for robotics / simulation workflows)*
 
-- `output/traffic_animation.usd` - animated 3D scene
-- `output/realistic_animation_summary.json` - processing and track summary
-
----
-
-## Open in Isaac Sim
-
-1. Launch Isaac Sim
-2. `File -> Open`
+1. Launch **Isaac Sim**
+2. Go to `File → Open`
 3. Select `output/traffic_animation.usd`
-4. Press **Play** on timeline
+4. Press **Play** on the timeline
 
----
+### USD Composer *(recommended for scene inspection and USD editing)*
 
-## Open in USD Composer
-
-1. Launch USD Composer
-2. `File -> Open`
+1. Launch **USD Composer**
+2. Go to `File → Open`
 3. Select `output/traffic_animation.usd`
-4. Use timeline playback to review animation
+4. Use the timeline playback controls to review the animation
 
 ---
 
-## How it works (high level)
+## Limitations
 
-1. **Detection** - YOLOv8 detects `car`, `bus`, `truck`
-2. **Tracking** - a distance-based assignment keeps IDs stable
-3. **3D mapping** - 2D image coordinates are mapped to road-space coordinates
-4. **Orientation** - heading is computed from trajectory direction
-5. **USD export** - scene, lighting, road, and animated vehicles are written to USD
+- **Approximate depth** — 3D position estimation uses a projective road-plane mapping, not calibrated photogrammetry. Metric accuracy depends on camera viewpoint and video quality.
+- **COCO classes only** — vehicle detection is currently limited to the traffic-relevant classes available in the YOLOv8 COCO model (`car`, `bus`, `truck`).
+- **Monocular input** — no stereo or depth-sensor support at this time.
 
 ---
 
-## Current limitations
+## Roadmap
 
-- Monocular depth estimation is approximate (not calibrated photogrammetry)
-- Accuracy depends on camera viewpoint and video quality
-- Vehicle classes are currently limited to COCO traffic classes used in script
-
----
-
-## Roadmap ideas
-
-- Camera calibration input for improved metric accuracy
-- Better MOT data association (appearance features + Kalman/Hungarian full pipeline)
-- Config file for thresholds and world mapping parameters
-- Optional real vehicle USD asset loading
+- [ ] Camera calibration input for metric-accurate 3D reconstruction
+- [ ] Full MOT pipeline — appearance features + Kalman filter + Hungarian algorithm
+- [ ] Config file for detection thresholds and world-mapping parameters
+- [ ] Optional loading of real vehicle USD asset libraries
+- [ ] Multi-camera support
 
 ---
 
 ## License
 
-MIT
+This project is licensed under the [MIT License](LICENSE).
 
-# trafficvision3d
+---
+
+## Author
+
+**Kamran Gholizadeh HamlAbadi**
+PhD Candidate, University of Ottawa · MCRLab
+[github.com/kamranghz](https://github.com/kamranghz) · [LinkedIn](https://www.linkedin.com/in/kamrangh)
